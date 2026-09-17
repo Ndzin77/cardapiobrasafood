@@ -1,0 +1,19 @@
+project_id = "mqbhbarhosxfuivuksvr"
+
+[functions.push-notify]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false
+
+[functions.expire-checkouts]
+verify_jwt = false
+
+[functions.customer-auth]
+verify_jwt = false
+
+[functions.seed-demo-stores]
+verify_jwt = false

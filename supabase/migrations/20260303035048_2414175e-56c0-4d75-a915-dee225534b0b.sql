@@ -1,0 +1,1 @@
+ALTER TABLE public.stores ADD COLUMN show_watermark boolean DEFAULT true;

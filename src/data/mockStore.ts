@@ -1,0 +1,140 @@
+import { Product, Category, StoreInfo } from "@/types/store";
+import productParmegiana from "@/assets/product-parmegiana.jpg";
+import productBurger from "@/assets/product-burger.jpg";
+import productPizza from "@/assets/product-pizza.jpg";
+import productDessert from "@/assets/product-dessert.jpg";
+import productPicanha from "@/assets/product-picanha.jpg";
+import heroBanner from "@/assets/hero-banner.jpg";
+
+export const storeInfo: StoreInfo = {
+  name: "Sabor & Arte",
+  slug: "sabor-arte",
+  description: "O melhor da culinária artesanal com ingredientes frescos e receitas de família. Feito com amor para você!",
+  logo: "/placeholder.svg",
+  coverImage: heroBanner,
+  address: "Rua das Flores, 123 - Centro, São Paulo - SP",
+  phone: "(11) 99999-9999",
+  whatsapp: "5511999999999",
+  instagram: "@saborarte",
+  openingHours: [
+    { day: "Segunda", hours: "11:00 - 22:00", isOpen: true },
+    { day: "Terça", hours: "11:00 - 22:00", isOpen: true },
+    { day: "Quarta", hours: "11:00 - 22:00", isOpen: true },
+    { day: "Quinta", hours: "11:00 - 22:00", isOpen: true },
+    { day: "Sexta", hours: "11:00 - 23:00", isOpen: true },
+    { day: "Sábado", hours: "11:00 - 23:00", isOpen: true },
+    { day: "Domingo", hours: "12:00 - 20:00", isOpen: true },
+  ],
+  deliveryFee: 5.99,
+  minOrder: 25,
+  estimatedTime: "30-45 min",
+  acceptedPayments: ["Pix", "Cartão de Crédito", "Cartão de Débito", "Dinheiro"],
+  isOpen: true,
+};
+
+export const categories: Category[] = [
+  { id: "1", name: "Destaques", icon: "⭐" },
+  { id: "2", name: "Pratos", icon: "🍽️" },
+  { id: "3", name: "Lanches", icon: "🍔" },
+  { id: "4", name: "Pizzas", icon: "🍕" },
+  { id: "5", name: "Sobremesas", icon: "🍰" },
+  { id: "6", name: "Bebidas", icon: "🥤" },
+];
+
+export const products: Product[] = [
+  {
+    id: "1",
+    name: "Filé à Parmegiana",
+    description: "Filé mignon empanado, molho de tomate caseiro, queijo gratinado. Acompanha arroz e fritas.",
+    price: 59.90,
+    originalPrice: 69.90,
+    image: productParmegiana,
+    category: "2",
+    available: true,
+    featured: true,
+  },
+  {
+    id: "2",
+    name: "Picanha na Brasa",
+    description: "Picanha grelhada no ponto, farofa especial, vinagrete e arroz. Serve 2 pessoas.",
+    price: 89.90,
+    image: productPicanha,
+    category: "2",
+    available: true,
+    featured: true,
+  },
+  {
+    id: "3",
+    name: "X-Tudo Artesanal",
+    description: "Hambúrguer 180g, bacon, ovo, queijo, alface, tomate, cebola caramelizada e molho especial.",
+    price: 32.90,
+    image: productBurger,
+    category: "3",
+    available: true,
+    featured: true,
+  },
+  {
+    id: "4",
+    name: "Pizza Margherita",
+    description: "Molho de tomate italiano, mussarela de búfala, manjericão fresco e azeite trufado.",
+    price: 49.90,
+    image: productPizza,
+    category: "4",
+    available: true,
+  },
+  {
+    id: "5",
+    name: "Pizza Pepperoni",
+    description: "Pepperoni artesanal, mussarela especial e orégano.",
+    price: 54.90,
+    image: productPizza,
+    category: "4",
+    available: true,
+  },
+  {
+    id: "6",
+    name: "Petit Gâteau",
+    description: "Bolinho de chocolate com interior cremoso, sorvete de creme e calda de frutas vermelhas.",
+    price: 24.90,
+    image: productDessert,
+    category: "5",
+    available: true,
+    featured: true,
+  },
+  {
+    id: "7",
+    name: "Cheesecake de Frutas",
+    description: "Cheesecake cremoso com cobertura de frutas da estação.",
+    price: 19.90,
+    image: productDessert,
+    category: "5",
+    available: true,
+  },
+  {
+    id: "8",
+    name: "Suco Natural",
+    description: "Suco de laranja, limão, maracujá ou abacaxi. 500ml.",
+    price: 9.90,
+    image: productParmegiana,
+    category: "6",
+    available: true,
+  },
+  {
+    id: "9",
+    name: "Refrigerante Lata",
+    description: "Coca-Cola, Guaraná ou Sprite. 350ml.",
+    price: 6.90,
+    image: productBurger,
+    category: "6",
+    available: true,
+  },
+  {
+    id: "10",
+    name: "Água Mineral",
+    description: "Com ou sem gás. 500ml.",
+    price: 4.90,
+    image: productPizza,
+    category: "6",
+    available: true,
+  },
+];
