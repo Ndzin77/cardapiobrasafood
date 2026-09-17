@@ -26,8 +26,12 @@ export function sanitizeProductOptions(raw: unknown): ProductOption[] {
         choices: cleanChoices.map((c: any) => ({
           ...c,
           name: c.name.trim(),
+          allow_multiple: c.allow_multiple === true,
+          max_qty: Number.isFinite(Number(c.max_qty)) && Number(c.max_qty) > 0 ? Number(c.max_qty) : undefined,
+          min_qty: Number.isFinite(Number(c.min_qty)) && Number(c.min_qty) > 0 ? Number(c.min_qty) : undefined,
         })),
       } as ProductOption;
     })
     .filter((opt) => opt.choices.length > 0);
 }
+

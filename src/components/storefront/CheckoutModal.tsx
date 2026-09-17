@@ -4,6 +4,7 @@ import { useCart } from "@/hooks/useCart";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { saveCustomerInfo, loadCustomerInfo, saveCustomerAddress, loadCustomerAddress, CustomerAddressInfo, loadAddressList } from "@/hooks/useCustomerOrders";
 import { AddressSelector, SaveAddressPrompt } from "@/components/storefront/AddressSelector";
+import { ZoneNotCoveredModal } from "@/components/storefront/ZoneNotCoveredModal";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { StoreInfo, CartItem } from "@/types/store";
 import {
@@ -509,7 +510,7 @@ export function CheckoutModal({ open, onOpenChange, store, storeId, orderType, c
     };
 
     tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(() => { if (document.hidden) return; tick(); }, 1000);
     return () => clearInterval(interval);
   }, [step, checkoutExpiresAt]);
 
@@ -580,6 +581,35 @@ export function CheckoutModal({ open, onOpenChange, store, storeId, orderType, c
   const availableNeighborhoods = useMemo(() => getZoneNeighborhoods(deliveryZones), [deliveryZones]);
   const hasNeighborhoodAutocomplete = storeHasZones && zoneTypes.neighborhood && availableNeighborhoods.length > 0;
   const [neighborhoodPopoverOpen, setNeighborhoodPopoverOpen] = useState(false);
+
+  // ── Out-of-area guidance modal ──
+  const [zoneModalOpen, setZoneModalOpen] = useState(false);
+  const [confirmNeighborhoodOpen, setConfirmNeighborhoodOpen] = useState(false);
+  const [confirmedNeighborhood, setConfirmedNeighborhood] = useState<string>("");
+  const zoneModalShownFor = useRef<string>("");
+  const zoneModalReason: "not_covered" | "cep_mismatch" = !cepNeighborhoodValidation.consistent
+    ? "cep_mismatch"
+    : "not_covered";
+
+  useEffect(() => {
+    if (!storeHasZones || deliveryType !== "delivery" || formStep !== "endereco") return;
+    if (!zoneTypes.neighborhood || availableNeighborhoods.length === 0) return;
+    const blocked = (hasRelevantAddressData && !zoneMatch.matched) || !cepNeighborhoodValidation.consistent;
+    const signature = `${formData.neighborhood}|${formData.cep}|${zoneModalReason}`;
+    if (!blocked) {
+      zoneModalShownFor.current = "";
+      return;
+    }
+    if (zoneModalShownFor.current === signature) return;
+    zoneModalShownFor.current = signature;
+    const t = setTimeout(() => setZoneModalOpen(true), 350);
+    return () => clearTimeout(t);
+  }, [
+    storeHasZones, deliveryType, formStep, zoneTypes.neighborhood, availableNeighborhoods.length,
+    hasRelevantAddressData, zoneMatch.matched, cepNeighborhoodValidation.consistent,
+    formData.neighborhood, formData.cep, zoneModalReason,
+  ]);
+
   const effectiveDeliveryFee = deliveryType === "delivery" ? deliveryFee : 0;
   // For preorder with instant_only mode, delivery fee is zero
   const deliveryFeeModeEarly = (preorderConfig as any)?.delivery_fee_mode || "instant_only";
@@ -2351,24 +2381,91 @@ export function CheckoutModal({ open, onOpenChange, store, storeId, orderType, c
                             {pickupEnabled ? "Mas você pode retirar na loja!" : "Entre em contato para verificar disponibilidade."}
                           </p>
                         </div>
-                        {pickupEnabled && (
+                        <div className="shrink-0 flex flex-col gap-1">
                           <Button
                             type="button"
-                            variant="outline"
                             size="sm"
-                            className="shrink-0 text-[11px] h-7 rounded-lg border-destructive/40 hover:bg-destructive/10"
-                            onClick={() => {
-                              setDeliveryType("pickup");
-                              setFormStep("delivery");
-                              toast.success("Modo alterado para retirada!");
-                            }}
+                            className="text-[11px] h-7 rounded-lg font-bold"
+                            onClick={() => setZoneModalOpen(true)}
                           >
-                            Retirar na loja
+                            Alterar bairro
                           </Button>
-                        )}
+                          {pickupEnabled && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-[11px] h-7 rounded-lg border-destructive/40 hover:bg-destructive/10"
+                              onClick={() => {
+                                setDeliveryType("pickup");
+                                setFormStep("delivery");
+                                toast.success("Modo alterado para retirada!");
+                              }}
+                            >
+                              Retirar na loja
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )
                   )}
+
+                  <ZoneNotCoveredModal
+                    open={zoneModalOpen}
+                    onOpenChange={setZoneModalOpen}
+                    detected={formData.neighborhood}
+                    zones={deliveryZones}
+                    pickupEnabled={pickupEnabled}
+                    whatsapp={store.whatsapp}
+                    storeName={store.name}
+                    reason={zoneBlocked ? zoneModalReason : "change"}
+                    onSelectNeighborhood={(name) => {
+                      setFormData((prev) => ({ ...prev, neighborhood: name }));
+                      setInvalidFields((prev) => { const n = new Set(prev); n.delete("neighborhood"); return n; });
+                      setConfirmedNeighborhood(name);
+                      toast.success(`Bairro alterado para ${name}!`);
+                    }}
+                    onChoosePickup={() => {
+                      setDeliveryType("pickup");
+                      setFormStep("delivery");
+                      toast.success("Modo alterado para retirada!");
+                    }}
+                  />
+
+                  <AlertDialog open={confirmNeighborhoodOpen} onOpenChange={setConfirmNeighborhoodOpen}>
+                    <AlertDialogContent className="max-w-sm rounded-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirme seu bairro</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Vamos entregar no bairro <strong className="text-foreground">{formData.neighborhood}</strong>. É esse mesmo?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+                        <AlertDialogAction
+                          className="w-full h-12 rounded-xl font-bold"
+                          onClick={() => {
+                            setConfirmedNeighborhood(formData.neighborhood.trim());
+                            setConfirmNeighborhoodOpen(false);
+                            goNext();
+                          }}
+                        >
+                          Sim, é esse bairro
+                        </AlertDialogAction>
+                        <AlertDialogCancel
+                          className="w-full h-11 rounded-xl mt-0"
+                          onClick={() => {
+                            setConfirmNeighborhoodOpen(false);
+                            setTimeout(() => setZoneModalOpen(true), 120);
+                          }}
+                        >
+                          Não, alterar bairro
+                        </AlertDialogCancel>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+
+
 
                   <div className="flex gap-3 pt-2">
                     <Button type="button" variant="outline" onClick={goBack} className="h-12 px-4 rounded-xl gap-1.5">
@@ -2385,7 +2482,15 @@ export function CheckoutModal({ open, onOpenChange, store, storeId, orderType, c
                           toast.error(`Pedido mínimo para sua região: R$ ${zoneMinOrder.toFixed(2).replace(".", ",")}. Faltam R$ ${zoneMinOrderRemaining.toFixed(2).replace(".", ",")}.`);
                           return;
                         }
-                        validateStep() && goNext();
+                        if (!validateStep()) return;
+                        if (
+                          storeHasZones && deliveryType === "delivery" && zoneTypes.neighborhood &&
+                          formData.neighborhood?.trim() && confirmedNeighborhood !== formData.neighborhood.trim()
+                        ) {
+                          setConfirmNeighborhoodOpen(true);
+                          return;
+                        }
+                        goNext();
                       }}
                       disabled={zoneBlocked || zoneMinOrderBlocked}
                       className="flex-1 h-12 rounded-xl gap-2 text-sm font-bold gradient-primary shadow-soft hover:shadow-medium transition-all duration-300 disabled:opacity-50"

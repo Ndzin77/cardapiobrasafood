@@ -253,7 +253,7 @@ export function OrderDetailModal({ open, onOpenChange, order, storeName, storeId
                           {item.selected_options.map((opt: any, oi: number) => (
                             <p key={oi} className="text-xs text-muted-foreground">
                               <span className="font-medium">{opt.group}:</span>{" "}
-                              {opt.choices.map((c: any) => c.name + (c.price > 0 ? ` (+R$${c.price.toFixed(2).replace(".", ",")})` : "")).join(", ")}
+                              {opt.choices.map((c: any) => `${c.qty && c.qty > 1 ? `${c.qty}x ` : ""}${c.name}${c.price > 0 ? ` (+R$${(c.price * (c.qty || 1)).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}
                             </p>
                           ))}
                         </div>

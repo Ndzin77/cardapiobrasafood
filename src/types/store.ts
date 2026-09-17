@@ -28,6 +28,12 @@ export interface ProductOptionChoice {
   price_modifier: number;
   image_url?: string;
   enabled?: boolean;
+  /** Allows the same choice to be picked several times (e.g. 2x Nutella) */
+  allow_multiple?: boolean;
+  /** Max repetitions of this choice when allow_multiple is on */
+  max_qty?: number;
+  /** Min repetitions of this choice when allow_multiple is on */
+  min_qty?: number;
 }
 
 export interface Category {
@@ -39,8 +45,9 @@ export interface Category {
 
 export interface SelectedOptionGroup {
   group: string;
-  choices: { name: string; price: number }[];
+  choices: { name: string; price: number; qty?: number }[];
 }
+
 
 export interface CartItem {
   product: Product;

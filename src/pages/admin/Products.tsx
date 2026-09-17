@@ -69,6 +69,21 @@ export default function Products() {
   const linkIngredient = useLinkIngredient();
   const unlinkIngredient = useUnlinkIngredient();
 
+  // Option groups already configured in other products — for one-tap reuse
+  const existingOptionGroups = useMemo(() => {
+    const list: { productName: string; option: ProductOption }[] = [];
+    (products ?? []).forEach((p: any) => {
+      const opts = Array.isArray(p.options) ? p.options : [];
+      opts.forEach((o: any) => {
+        if (o && typeof o.name === "string" && o.name.trim() && Array.isArray(o.choices) && o.choices.length > 0) {
+          list.push({ productName: p.name, option: o as ProductOption });
+        }
+      });
+    });
+    return list;
+  }, [products]);
+
+
   // Profit lookup map for margin badges
   const profitByProductId = useMemo(() => {
     const map: Record<string, { margin: number; cost: number }> = {};
@@ -516,7 +531,9 @@ export default function Products() {
                         : formData.options,
                     })
                   }
+                  existingGroups={existingOptionGroups}
                 />
+
 
 
 

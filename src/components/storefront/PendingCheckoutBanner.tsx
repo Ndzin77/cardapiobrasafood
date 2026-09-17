@@ -78,7 +78,7 @@ export function PendingCheckoutBanner({ slug, checkoutModalOpen, onOpenCheckoutM
     };
 
     check();
-    const interval = setInterval(check, 10000);
+    const interval = setInterval(() => { if (document.hidden) return; check(); }, 10000);
     return () => clearInterval(interval);
   }, [data?.id, slug]);
 
@@ -99,7 +99,7 @@ export function PendingCheckoutBanner({ slug, checkoutModalOpen, onOpenCheckoutM
       setCountdown(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
     };
     tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(() => { if (document.hidden) return; tick(); }, 1000);
     return () => clearInterval(interval);
   }, [expiresAt, slug]);
 

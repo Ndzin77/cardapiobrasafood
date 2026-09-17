@@ -176,7 +176,7 @@ export function DynamicCartSheet({ store, storeId, slug, initialCheckoutId, init
       setPendingTotal(Number(row.total));
     };
     check();
-    const interval = setInterval(check, 15000);
+    const interval = setInterval(() => { if (document.hidden) return; check(); }, 15000);
     return () => clearInterval(interval);
   }, [pendingData?.id, slug]);
 
@@ -196,7 +196,7 @@ export function DynamicCartSheet({ store, storeId, slug, initialCheckoutId, init
       setPendingCountdown(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
     };
     tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(() => { if (document.hidden) return; tick(); }, 1000);
     return () => clearInterval(interval);
   }, [pendingExpiresAt, slug]);
 

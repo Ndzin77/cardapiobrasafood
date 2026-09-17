@@ -123,9 +123,13 @@ export function MobileProductGrid({
     return map;
   }, [cartItems, products]);
 
-  // Scroll detection
+  // Scroll detection — throttled to one measurement per animation frame.
+  // Measuring every section on every scroll event caused jank on low-end phones.
   useEffect(() => {
-    const handleScroll = () => {
+    let frame: number | null = null;
+
+    const measure = () => {
+      frame = null;
       if (isScrollingToRef.current) return;
       const detectionPoint = 120;
       let currentCategory: string | null = null;
@@ -146,9 +150,18 @@ export function MobileProductGrid({
       }
     };
 
+    const handleScroll = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(measure);
+    };
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [activeCategory, onCategoryChange]);
+
 
   useEffect(() => {
     if (!scrollToCategory) return;

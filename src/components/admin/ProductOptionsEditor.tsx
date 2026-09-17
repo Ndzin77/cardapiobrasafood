@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, GripVertical, Settings2, ImageIcon } from "lucide-react";
+import { Plus, Trash2, GripVertical, Settings2, ImageIcon, Copy, AlertTriangle } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageUpload } from "./ImageUpload";
 
 export interface ProductOptionChoice {
@@ -14,6 +15,12 @@ export interface ProductOptionChoice {
   price_modifier: number;
   image_url?: string;
   enabled?: boolean;
+  /** Customer can pick this choice more than once (e.g. 2x Nutella) */
+  allow_multiple?: boolean;
+  /** Max repetitions when allow_multiple is on */
+  max_qty?: number;
+  /** Min repetitions when allow_multiple is on and the choice is picked */
+  min_qty?: number;
 }
 
 export interface ProductOption {
@@ -25,11 +32,18 @@ export interface ProductOption {
   choices: ProductOptionChoice[];
 }
 
+export interface ExistingGroup {
+  productName: string;
+  option: ProductOption;
+}
+
 interface ProductOptionsEditorProps {
   options: ProductOption[];
   onChange: (options: ProductOption[]) => void;
   hasOptions: boolean;
   onHasOptionsChange: (hasOptions: boolean) => void;
+  /** Option groups already configured in other products, for one-tap reuse */
+  existingGroups?: ExistingGroup[];
 }
 
 export function ProductOptionsEditor({
@@ -37,9 +51,36 @@ export function ProductOptionsEditor({
   onChange,
   hasOptions,
   onHasOptionsChange,
+  existingGroups = [],
 }: ProductOptionsEditorProps) {
   const [expandedOption, setExpandedOption] = useState<number | null>(0);
   const [showImageUpload, setShowImageUpload] = useState<Record<string, boolean>>({});
+  const [importOpen, setImportOpen] = useState(false);
+
+  // De-duplicate library groups by name + choice signature
+  const groupLibrary = useMemo(() => {
+    const seen = new Set<string>();
+    return existingGroups.filter(({ option }) => {
+      if (!option?.name) return false;
+      const key = `${option.name}::${(option.choices || []).map((c) => c.name).join("|")}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [existingGroups]);
+
+  const importGroup = (group: ProductOption) => {
+    const baseName = group.name;
+    let name = baseName;
+    let i = 2;
+    while (options.some((o) => o.name === name)) {
+      name = `${baseName} (${i++})`;
+    }
+    onChange([...options, { ...group, name, choices: group.choices.map((c) => ({ ...c })) }]);
+    setExpandedOption(options.length);
+    setImportOpen(false);
+  };
+
 
   const addOption = () => {
     onChange([
@@ -212,7 +253,7 @@ export function ProductOptionsEditor({
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Mínimo de Seleções</Label>
+                        <Label>Mínimo de escolhas diferentes</Label>
                         <Input
                           type="number"
                           min="0"
@@ -223,7 +264,7 @@ export function ProductOptionsEditor({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Máximo de Seleções</Label>
+                        <Label>Máximo de escolhas diferentes</Label>
                         <Input
                           type="number"
                           min="1"
@@ -234,6 +275,19 @@ export function ProductOptionsEditor({
                         />
                       </div>
                     </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Estes limites contam quantas escolhas diferentes o cliente marca. As repetições
+                      (2x, 3x...) têm mínimo e máximo próprios em cada escolha.
+                    </p>
+
+                    {option.min_select > option.max_select && (
+                      <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        O mínimo não pode ser maior que o máximo — o cliente nunca conseguirá concluir.
+                      </div>
+                    )}
+
 
                     {/* Choices */}
                     <div className="space-y-2">
@@ -315,6 +369,73 @@ export function ProductOptionsEditor({
                                   </Button>
                                 )}
                               </div>
+
+                              {/* Repeat settings */}
+                              <div className="flex flex-wrap items-center gap-4 pl-1">
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id={`repeat-${imageKey}`}
+                                    checked={choice.allow_multiple === true}
+                                    onCheckedChange={(checked) => {
+                                      updateChoice(optionIndex, choiceIndex, "allow_multiple", checked);
+                                      if (checked && !choice.max_qty) {
+                                        updateChoice(optionIndex, choiceIndex, "max_qty", Math.max(option.max_select, 2));
+                                      }
+                                    }}
+                                    className="shrink-0"
+                                  />
+                                  <Label htmlFor={`repeat-${imageKey}`} className="text-xs text-muted-foreground">
+                                    Cliente pode repetir (2x, 3x...)
+                                  </Label>
+                                </div>
+                                {choice.allow_multiple && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs text-muted-foreground">Mín. por escolha</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        value={choice.min_qty ?? ""}
+                                        placeholder="1"
+                                        onChange={(e) =>
+                                          updateChoice(
+                                            optionIndex,
+                                            choiceIndex,
+                                            "min_qty",
+                                            parseInt(e.target.value) || 1
+                                          )
+                                        }
+                                        className="w-20 h-8"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label className="text-xs text-muted-foreground">Máx. por escolha</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        value={choice.max_qty ?? ""}
+                                        onChange={(e) =>
+                                          updateChoice(
+                                            optionIndex,
+                                            choiceIndex,
+                                            "max_qty",
+                                            parseInt(e.target.value) || 1
+                                          )
+                                        }
+                                        className="w-20 h-8"
+                                      />
+                                    </div>
+                                    {(choice.min_qty ?? 1) > (choice.max_qty ?? 1) && (
+                                      <span className="flex items-center gap-1 text-xs text-destructive">
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                        Mín. maior que o máx. desta escolha.
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+
+
                               
                               {/* Image Upload (Collapsible) */}
                               {showImageUpload[imageKey] && (
@@ -351,16 +472,66 @@ export function ProductOptionsEditor({
             </Collapsible>
           ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addOption}
-            className="w-full border-dashed"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Grupo de Opções
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addOption}
+              className="w-full border-dashed"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Grupo de Opções
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setImportOpen(true)}
+              disabled={groupLibrary.length === 0}
+              className="w-full"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              {groupLibrary.length > 0
+                ? `Importar grupo existente (${groupLibrary.length})`
+                : "Nenhum grupo para importar"}
+            </Button>
+          </div>
+
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Importar grupo de adicionais</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Copie um grupo já usado em outro produto. Depois da cópia, você pode editar à vontade
+                sem alterar o produto original.
+              </p>
+              <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+                {groupLibrary.map(({ productName, option }, i) => (
+                  <button
+                    key={`${option.name}-${i}`}
+                    type="button"
+                    onClick={() => importGroup(option)}
+                    className="w-full text-left p-3 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm">{option.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {option.choices?.length || 0} escolha(s)
+                      </Badge>
+                      {option.required && (
+                        <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      Usado em: {productName} — {(option.choices || []).map((c) => c.name).join(", ")}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
+
       )}
     </div>
   );

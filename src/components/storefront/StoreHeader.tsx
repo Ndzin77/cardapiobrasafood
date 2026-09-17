@@ -34,9 +34,10 @@ export function StoreHeader({ store, storeId }: StoreHeaderProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/15 via-transparent to-accent/15" />
         
-        {/* Animated blur orbs — hidden on mobile for performance */}
-        <div className="hidden sm:block absolute -top-32 -right-32 w-96 h-96 bg-primary/25 rounded-full blur-3xl animate-pulse" />
-        <div className="hidden sm:block absolute -bottom-32 -left-32 w-96 h-96 bg-accent/25 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+        {/* Animated blur orbs — desktop only, and static when the user asks for less motion */}
+        <div className="hidden lg:block absolute -top-32 -right-32 w-96 h-96 bg-primary/25 rounded-full blur-3xl motion-safe:animate-pulse" />
+        <div className="hidden lg:block absolute -bottom-32 -left-32 w-96 h-96 bg-accent/25 rounded-full blur-3xl motion-safe:animate-pulse" style={{ animationDelay: "1s" }} />
+
         
         {/* Trust badge — top left on mobile */}
         <div className="absolute top-3 left-3 sm:top-4 sm:right-4 sm:left-auto flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/20">
